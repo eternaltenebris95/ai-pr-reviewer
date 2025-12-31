@@ -25,9 +25,4 @@ Using AI to analyze push/pull of git hub request
 		git commit -m "Initial commit"
 		git push -u origin main 
 
-2.
-# test
-# Test PR
-# trigger
-# trigger
-# trigger
+2. FIXING DOCKERFILE 12/30
