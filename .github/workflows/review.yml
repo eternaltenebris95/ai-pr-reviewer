@@ -15,7 +15,11 @@ jobs:
 
       # Step 2: Get diff
       - name: Get code diff
-        run: git diff HEAD^ > diff.txt
+        run: |
+      git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+      git diff FETCH_HEAD...HEAD > diff.txt
+      echo "=== DIFF GENERATED ==="
+      cat diff.txt
 
       # Step 3: Build Docker image
       - name: Build reviewer Docker image
