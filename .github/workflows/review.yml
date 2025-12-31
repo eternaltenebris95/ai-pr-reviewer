@@ -9,37 +9,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download the repository code
-      - name: Checkout code
+      # Step 1: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Get the diff between last commit and new commit
+      # Step 2: Get diff
       - name: Get code diff
         run: git diff HEAD^ > diff.txt
 
-      # Step 3: Build Docker image from our Dockerfile
-        # This builds your Python reviewer inside a container
+      # Step 3: Build Docker image
       - name: Build reviewer Docker image
         run: docker build -t ai-reviewer .
 
-      # Step 4: Run the reviewer and pass in the environment variable
+      # Step 4: Run reviewer and save output
       - name: Run AI code review
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cat diff.txt | docker run -e OPENAI_API_KEY="$OPENAI_API_KEY" -i ai-reviewer > review_output.txt
 
-      # Step 5: Post the review as a PR comment
-      - name: Comment on PR
-        uses: actions/github-script@v6
+      # Step 5: Post or update comment
+      - name: Post or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const review = fs.readFileSync('review_output.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: review
-            });
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## 🤖 Automated AI Pull Request Review
+            Thank you for your PR! Here’s the AI review:
+
+            ```
+            $(cat review_output.txt)
+            ```
+          edit-mode: replace
