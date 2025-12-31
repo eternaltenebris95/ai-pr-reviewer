@@ -9,41 +9,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
-      - name: Checkout repository
+      # Step 1: Checkout repository with full history
+      - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      # Step 2: Get diff
+      # Step 2: Get diff between PR branch and base branch (main)
       - name: Get code diff
         run: |
-      git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
-      git diff FETCH_HEAD...HEAD > diff.txt
-      echo "=== DIFF GENERATED ==="
-      cat diff.txt
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          git diff FETCH_HEAD...HEAD > diff.txt
+          echo "=== DIFF CREATED ==="
+          cat diff.txt
 
-      # Step 3: Build Docker image
+      # Step 3: Build reviewer Docker image
       - name: Build reviewer Docker image
         run: docker build -t ai-reviewer .
 
-      # Step 4: Run reviewer and save output
+      # Step 4: Run reviewer and capture output
       - name: Run AI code review
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cat diff.txt | docker run -e OPENAI_API_KEY="$OPENAI_API_KEY" -i ai-reviewer > review_output.txt
 
-      # Step 5: Post or update comment
-      - name: Post or update PR comment
-        uses: peter-evans/create-or-update-comment@v4
+      # Step 5: Post the review as a PR comment
+      - name: Comment on PR
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ## 🤖 Automated AI Pull Request Review
-            Thank you for your PR! Here’s the AI review:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review_output.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🤖 AI Code Review\n\n${review}`
+            });
 
-            ```
-            $(cat review_output.txt)
-            ```
-          edit-mode: replace
