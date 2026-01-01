@@ -45,8 +45,18 @@ Using AI to analyze push/pull of git hub request
 		sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 	- Check Docker version
 		docker --version
+	- Make Sure your OpenAI had subscription or this wont work
 
-# trigger AI
-# retrigger
-# retrigger
-# retrigger
+3. Testing If The Reviewer Work
+	- Make sure you’re on main and up to date
+		git checkout main
+		git pull origin main
+	- Create a new test branch (pick any name)
+		git checkout -b test-pr2
+	- Make a small change (so the PR has a diff)
+		echo "# trigger ai reviewer" >> README.md
+		git add README.md
+		git commit -m "Trigger AI reviewer again"
+	- Push the new branch to GitHub
+		git push -u origin test-pr2
+
