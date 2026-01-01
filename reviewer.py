@@ -1,9 +1,13 @@
 import sys
-import openai
-
-# Read OpenAI API key from environment variable
 import os
-openai.api_key = os.getenv("OPENAI_API_KEY")
+from openai import OpenAI
+
+# Load the API key from environment variable
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("Missing OPENAI_API_KEY environment variable")
+
+client = OpenAI(api_key=api_key)
 
 
 def review_code(diff):
@@ -15,7 +19,7 @@ def review_code(diff):
         f"{diff}"
     )
 
-    response = openai.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[{"role": "user", "content": prompt}]
     )
