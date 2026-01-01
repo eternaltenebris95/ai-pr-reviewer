@@ -4,42 +4,49 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   review:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download the repository code
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      # Step 2: Get the diff between last commit and new commit
-      - name: Get code diff
-        run: git diff HEAD^ > diff.txt
+      - name: Get PR diff
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          git diff FETCH_HEAD...HEAD > diff.txt
 
-      # Step 3: Build Docker image from our Dockerfile
-        # This builds your Python reviewer inside a container
-      - name: Build reviewer Docker image
+      - name: Build reviewer
         run: docker build -t ai-reviewer .
 
-      # Step 4: Run the reviewer and pass in the environment variable
-      - name: Run AI code review
+      - name: Run reviewer
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          cat diff.txt | docker run -e OPENAI_API_KEY="$OPENAI_API_KEY" -i ai-reviewer > review_output.txt
+          cat diff.txt | docker run -e OPENAI_API_KEY="$OPENAI_API_KEY" -i ai-reviewer > review.txt
 
-      # Step 5: Post the review as a PR comment
-      - name: Comment on PR
-        uses: actions/github-script@v6
+      - name: Read review into env
+        run: |
+          echo "REVIEW<<EOF" >> $GITHUB_ENV
+          cat review.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Post review comment
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const review = fs.readFileSync('review_output.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: review
-            });
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## 🤖 AI Pull Request Review
+            ```
+            ${{ env.REVIEW }}
+            ```
+          edit-mode: replace
+
