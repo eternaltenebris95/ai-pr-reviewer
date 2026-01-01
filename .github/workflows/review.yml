@@ -32,6 +32,12 @@ jobs:
         run: |
           cat diff.txt | docker run -e OPENAI_API_KEY="$OPENAI_API_KEY" -i ai-reviewer > review.txt
 
+      - name: Read review into env
+        run: |
+          echo "REVIEW<<EOF" >> $GITHUB_ENV
+          cat review.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Post review comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -40,7 +46,7 @@ jobs:
           body: |
             ## 🤖 AI Pull Request Review
             ```
-            $(cat review.txt)
+            ${{ env.REVIEW }}
             ```
           edit-mode: replace
 
